@@ -1,0 +1,182 @@
+#! /usr/bin/env python
+
+import sys
+import getopt
+import time
+
+from cluster_utils.allocation import init_cpus, get_cpus_mapping_from_xml, get_cpus_mapping, get_available_cpus, get_used_cpus
+
+def usage():
+	print "get_cpuset_allocation -h | ( [-q -f <format>] [-p <path>] (-u | -a | -ua) | (-g <number> [-d <domain> ] ))"
+	print "\t-h: help"
+	print "\t-c: count the number of cpus instead of naming them"
+	print "\t-u: used cpus"
+	print "\t-a: available cpus"
+	print "\t-g: number of available cpus to get"
+	print "\t-q: quiet (only the values)"
+	print "\t-p: path to libvirt xml domains"
+	print "\t-d: get the stats only for the given domain"
+	print "\t-f: set the output format (simple, graphite)"
+
+###############################################################################
+
+number_of_cpus = 0
+show_used = False
+show_available = False
+give_cpus = False
+quiet = False
+count = False
+path = ""
+domain = ""
+cpus = {}
+format = "simple"
+
+try:
+	opts, args = getopt.gnu_getopt(sys.argv[:], "f:cqhg:uap:d:", [ "format", "count", "quiet", "help", "get=", "used", "available", "path=", "domain=" ])
+except getopt.GetoptError as err:
+	print str(err)
+	sys.exit(2)
+
+if len(opts) < 1:
+	usage()
+	sys.exit(2)
+
+for o, a in opts:
+	if o in ("-h", "--help"):
+		usage()
+		sys.exit(0)
+	if o in ("-f", "--format="):
+		format = a
+	if o in ("-c", "--count"):
+		count = True
+	if o in ("-q", "--quiet"):
+		quiet = True
+	if o in ("-d", "--domain"):
+		domain = a
+	if o in ("-g", "--get="):
+		try:
+			number_of_cpus=int(a)
+			give_cpus=True
+		except:
+			usage()
+			sys.exit(1)
+	if o in ("-a", "--available"):
+		show_available = True
+	if o in ("-u", "--used"):
+		show_used = True
+	if o in ("-p", "--path"):
+		path=a
+
+###############################################################################
+
+init_cpus(cpus)
+
+# path given
+# Shall we guess used cpus from libvirt xml domain files?
+
+if path != "":
+	if get_cpus_mapping_from_xml(path, cpus) == False and quiet == False:
+		print 'No domain found in %s' % path
+		sys.exit(1)
+
+# get cpu mapping from /sys/fs/cgroup and libvirtd's xml files
+get_cpus_mapping(cpus)
+
+# -g given
+# Some available cpus are given according to the cpus mapping
+if give_cpus:
+	counter = 0
+	if number_of_cpus == 0:
+		print "the given number of cpus must be greater than 0"
+		usage()
+		sys.exit(1)
+
+	if number_of_cpus > len(cpus):
+		print "not enough available cpus"
+		sys.exit(1)
+
+	message = ""
+
+	if domain == "":
+		result = get_available_cpus(cpus)
+		for i in range(0, number_of_cpus):
+			message += "%s," % result[i]
+
+		print message[0:len(message)-1]
+		sys.exit(0)
+	else:
+		for cpu in cpus:
+			if cpus[cpu] == domain:
+				if counter < number_of_cpus:
+					counter += 1
+					message += "%s," % cpu
+
+		if counter < number_of_cpus:
+			for cpu in get_available_cpus(cpus):
+				if counter < number_of_cpus:
+					counter += 1
+					message += "%s," % cpu
+				else:
+					break
+
+		print message[0:len(message)-1]
+		sys.exit(0)
+
+# -u given
+# Shall we print the used cpus?
+if show_used:
+	message = ""
+	counter = 0
+
+	# -d given
+	# Show only specified domain
+	if domain == "":
+		for cpu in get_used_cpus(cpus):
+			counter += 1
+			message += "%s," % cpu
+	else:
+		for cpu in cpus:
+			if cpus[cpu] == domain:
+				counter += 1
+				message += "%s," % cpu
+		if len(message) == 0:
+			print '%s not found' % domain
+			sys.exit(1)
+
+	if count == True:
+		message = "%i" % counter
+	else:
+		message = message[0:len(message)-1]
+
+	if quiet == False:
+		print "used cpus: %s" % message
+	else:
+		if format == "graphite":
+			print "cluster.cpuset.nr_used\t%s\t%.0f" % ( message, time.time() )
+		else:
+			print message
+
+# -a given
+# Shall we print the available cpus?
+if show_available:
+	message = ""
+	counter = 0
+
+	for cpu in get_available_cpus(cpus):
+		counter += 1
+		message += "%s," % cpu
+
+	if count == True:
+		message = "%i" % counter
+	else:
+		message = message[0:len(message)-1]
+
+	if quiet == False:
+		print "available cpus: %s" % message
+	else:
+		if format == "graphite":
+			print "cluster.cpuset.nr_available\t%s\t%.0f" % ( message, time.time() )
+		else:
+			print message
+
+sys.exit(0)

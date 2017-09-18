@@ -1,0 +1,27 @@
+#! /usr/bin/env python
+
+import subprocess
+from cluster_utils.sbd import get_sbd_command_line, sbd_reset_node
+
+command_line = get_sbd_command_line()
+
+# Listing
+listing_command = command_line
+listing_command.append('list')
+
+listing_result = subprocess.check_call(listing_command)
+reset_nodes_list = []
+
+for line in listing_result:
+	if 'reset' in line:
+		node = line.split('\s+')[1])
+		if node not in reset_nodes_list:
+			reset_nodes_list.append(node)
+
+for node in reset_nodes_list:
+	print sbd_reset_node(node, command_line)
+
+# Python 3.5
+#subprocess.run(command_line, stdout=subprocess.PIPE)
+
+

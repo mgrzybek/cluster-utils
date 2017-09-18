@@ -1,0 +1,16 @@
+#! /usr/bin/env python
+
+import subprocess
+from cluster_utils.sbd import get_sbd_command_line
+
+command_line = get_sbd_command_line()
+command_line.append('list')
+
+if os.getuid() != 0:
+	command_line.insert(0, 'sudo')
+
+# Python 3.5
+#subprocess.run(command_line, stdout=subprocess.PIPE)
+
+print(subprocess.check_call(command_line))
+

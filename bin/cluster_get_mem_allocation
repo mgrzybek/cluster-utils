@@ -1,0 +1,143 @@
+#! /usr/bin/env python
+
+import sys
+import getopt
+import time
+
+from cluster_utils.allocation import get_mem_mapping_from_xml, get_mem_mapping, get_available_mems, get_used_mems
+
+def usage():
+	print "get_mem.py -h | ( [-q -f <format>] [-p <path>] (-u | -a | -ua) | (-g <number> [-d <domain> ] ))"
+	print "\t-h: help"
+	print "\t-c: count the number of mems instead of naming them"
+	print "\t-u: used memory"
+	print "\t-a: available memory"
+	print "\t-g: number of available memory to get"
+	print "\t-q: quiet (only the values)"
+	print "\t-p: path to libvirt xml domains"
+	print "\t-d: get the stats only for the given domain"
+	print "\t-f: set the output format (simple, graphite)"
+
+###############################################################################
+
+mem_size = 0
+show_used = False
+show_available = False
+give_mem = False
+quiet = False
+path = ""
+domain = ""
+mems = {}
+format = "simple"
+
+try:
+	opts, args = getopt.gnu_getopt(sys.argv[:], "f:qhg:uap:d:", [ "format", "quiet", "help", "get=", "used", "available", "path=", "domain=" ])
+except getopt.GetoptError as err:
+	print str(err)
+	sys.exit(2)
+
+if len(opts) < 1:
+	usage()
+	sys.exit(2)
+
+for o, a in opts:
+	if o in ("-h", "--help"):
+		usage()
+		sys.exit(0)
+	if o in ("-f", "--format="):
+		format = a
+	if o in ("-q", "--quiet"):
+		quiet = True
+	if o in ("-d", "--domain"):
+		domain = a
+	if o in ("-g", "--get="):
+		try:
+			mem_size=int(a)
+			give_mem=True
+		except:
+			usage()
+			sys.exit(1)
+	if o in ("-a", "--available"):
+		show_available = True
+	if o in ("-u", "--used"):
+		show_used = True
+	if o in ("-p", "--path"):
+		path=a
+
+###############################################################################
+
+# path given
+# Shall we guess used memory from libvirt xml domain files?
+
+if path != "":
+	if get_mem_mapping_from_xml(path, mems) == False and quiet == False:
+		print 'No domain found in %s' % path
+		sys.exit(1)
+
+# get cpu mapping from /sys/fs/cgroup
+
+get_mem_mapping(mems)
+
+# -g given
+# Some available memory are given according to the mems mapping
+if give_mem:
+	if mem_size == 0:
+		print "the given memory size must be greater than 0"
+		usage()
+		sys.exit(1)
+
+	try:
+		if mem_size > get_available_mems(mems):
+			print "not enough available memory"
+			sys.exit(1)
+	except:
+		print "no machine.slice available."
+		sys.exit(1)
+
+	if quiet == False:
+		print "get memory: %sGo available" % mem_size
+		sys.exit(0)
+
+# -u given
+# Shall we print the used mem?
+if show_used:
+	message = ""
+	counter = 0
+
+	# -d given
+	# Show only specified domain
+	if domain == "":
+			message += "%s" % get_used_mems(mems)
+	else:
+		if mems[domain]:
+			message += "%s" % mems[domain]
+		else:
+			print '%s not found' % domain
+			sys.exit(1)
+
+	if quiet == False:
+		print "used memory: %sGo" % message
+	else:
+		if format == "graphite":
+			print "cluster.mem.gbytes_used\t%s\t%.0f" % ( message, time.time() )
+		else:
+			print message
+
+# -a given
+# Shall we print the available memory?
+if show_available:
+	try:
+		message = get_available_mems(mems)
+	except:
+		print "no machine.slice available."
+		sys.exit(1)
+
+	if quiet == False:
+		print "available memory: %sGo" % message
+	else:
+		if format == "graphite":
+			print "cluster.mem.gbytes_available\t%s\t%.0f" % ( message, time.time() )
+		else:
+			print message
+
+sys.exit(0)

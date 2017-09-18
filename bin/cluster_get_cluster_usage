@@ -1,0 +1,61 @@
+#! /usr/bin/env python
+
+import getopt
+import sys
+import socket
+import time
+
+from cluster_utils.usage import get_running_machines, get_running_resources
+
+show_machines = False
+show_resources = False
+quiet = False
+format = "simple"
+
+def usage():
+	print "get_cluster_usage -h | ( [-q -f <format>] (-r -m)|([-r][-m]) )"
+	print "\t-h: help"
+	print "\t-q: quiet (only the values)"
+	print "\t-r: get the number of resources (needs root privileges)"
+	print "\t-m: get the number of virtual machines running"
+	print "\t-f: set the output format (simple, graphite)"
+
+try:
+	opts, args = getopt.gnu_getopt(sys.argv[:], "f:rmh", [ "format", "resources", "machines", "help" ])
+except getopt.GetoptError as err:
+	print str(err)
+	sys.exit(2)
+
+for o, a in opts:
+	if o in ("-h", "--help"):
+		usage()
+		sys.exit(0)
+	if o in ("-f", "--format="):
+		format = a
+	if o in ("-q", "--quiet"):
+		quiet = True
+	if o in ("-r", "--resources"):
+		show_resources = True
+	if o in ("-m", "--machines"):
+		show_machines = True
+
+if show_machines == False and show_resources == False:
+	usage()
+	sys.exit(1)
+
+if show_machines:
+	result = get_running_machines()
+	if format == "graphite":
+		print "cluster.machines.nb_started\t%s\t%.0f" % ( result, time.time() )
+	else:
+		print "running machines: %s" % result
+
+if show_resources:
+	result = get_running_resources(socket.gethostname())
+	if result == None:
+		print "Error: must be run as root."
+		sys.exit(1)
+	if format == "graphite":
+		print "cluster.usage.resources\t%s\t%.0f" % ( result, time.time() )
+	else:
+		print "running resources: %s" % result

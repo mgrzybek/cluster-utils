@@ -1,0 +1,54 @@
+#! /usr/bin/env python
+
+import sys
+import getopt
+import time
+
+from cluster_utils.allocation import set_cpuset, set_cpuset_exclusive, unset_cpuset_exclusive
+
+def usage():
+	print "set_cpuset_allocation -h | -p <cgroup object path> -s <cpuset value> [-e]"
+	print "\t-h: help"
+	print "\t-p: cgroup object path (ex: /sys/fs/cgroup/cpuset/machine.slice)"
+	print "\t-s: used cpus"
+	print "\t-e: exclusive cpus (default is false)"
+
+
+###############################################################################
+
+path = ""
+cpuset=""
+cpu_exclusive = False
+
+
+try:
+	opts, args = getopt.gnu_getopt(sys.argv[:], "p:s:eh", [ "path=", "set=", "exclusive", "help"])
+except getopt.GetoptError as err:
+	print str(err)
+	sys.exit(2)
+
+if len(opts) < 1:
+	usage()
+	sys.exit(2)
+
+for o, a in opts:
+	if o in ("-h", "--help"):
+		usage()
+		sys.exit(0)
+	if o in ("-s", "--set="):
+		cpuset = a
+	if o in ("-p", "--path"):
+		path = a
+	if o in ("-e", "--exclusive"):
+		cpu_exclusive = True
+
+
+
+if cpu_exclusive:
+	set_cpuset(path, cpuset)
+	set_cpuset_exclusive(path)
+else:
+	unset_cpuset_exclusive(path)
+	set_cpuset(path, cpuset)
+
+sys.exit(0)
