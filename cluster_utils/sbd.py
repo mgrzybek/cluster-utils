@@ -19,6 +19,7 @@ def get_sbd_devices(conf_file):
 
 			if rs:
 				return rs.group(1).split(';')
+
 def get_sbd_command_line():
 	command_line = [ 'sbd' ]
 
@@ -26,8 +27,7 @@ def get_sbd_command_line():
 	luns = get_sbd_devices(conf_file)
 
 	if len(luns) == 0:
-		print('No device defined in %s' % conf_file)
-		sys.exit(1)
+		raise('No device defined in %s' % conf_file)
 
 	for lun in luns:
 		command_line.append('-d')
@@ -48,4 +48,3 @@ def sbd_reset_node(node, command_line = None):
 	reset_command.append('clear')
 
 	return subprocess.check_call(command_line)
-

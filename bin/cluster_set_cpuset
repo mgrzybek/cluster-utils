@@ -13,13 +13,11 @@ def usage():
 	print "\t-s: used cpus"
 	print "\t-e: exclusive cpus (default is false)"
 
-
 ###############################################################################
 
 path = ""
-cpuset=""
+cpuset = ""
 cpu_exclusive = False
-
 
 try:
 	opts, args = getopt.gnu_getopt(sys.argv[:], "p:s:eh", [ "path=", "set=", "exclusive", "help"])
@@ -41,8 +39,6 @@ for o, a in opts:
 		path = a
 	if o in ("-e", "--exclusive"):
 		cpu_exclusive = True
-
-
 
 if cpu_exclusive:
 	set_cpuset(path, cpuset)
