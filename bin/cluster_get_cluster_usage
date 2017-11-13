@@ -52,9 +52,7 @@ if show_machines:
 
 if show_resources:
 	result = get_running_resources(socket.gethostname())
-	if result == None:
-		print "Error: must be run as root."
-		sys.exit(1)
+
 	if format == "graphite":
 		print "cluster.usage.resources\t%s\t%.0f" % ( result, time.time() )
 	else:

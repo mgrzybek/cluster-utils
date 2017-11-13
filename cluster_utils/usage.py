@@ -9,10 +9,10 @@ def get_running_machines():
 
 def get_running_resources(node):
 	if os.getuid() > 0:
-		return None
+		raise Exception("Must be run as root")
 
 	current_node = ""
-	counter = -1
+	counter = 0
 	node_status_regex = re.compile("^Node (\w+): (\w+)$")
 	resource_regex = re.compile("^\s+(\d+)\s+.*$")
 
@@ -29,4 +29,4 @@ def get_running_resources(node):
 			if result and current_node == node:
 				counter += int(result.group(1))
 
-	return None
+	return counter
