@@ -92,7 +92,8 @@ def get_cpus_from_crm_attributes(cpus, quiet):
 	crm_cmd = "/usr/sbin/crm node utilization %s show cpu" % socket.gethostname()
 	crm_cpus = int(subprocess.check_output(crm_cmd, shell=True).strip().split("=")[-1])
 
-	server_cpus = int(subprocess.check_output("cat /proc/cpuinfo|grep -c ^proc", shell=True).strip())
+	# We could use nproc
+	server_cpus = int(subprocess.check_output("grep -c ^proc /proc/cpuinfo", shell=True).strip())
 
 	for i in range(0, server_cpus):
 		if i < server_cpus - crm_cpus:
@@ -106,7 +107,6 @@ def get_cpus_mapping(cpus, quiet=True):
 
 	try:
 		get_cpus_mapping_from_machine_xml(cpus)
-
 	except:
 		pass
 
