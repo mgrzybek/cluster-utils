@@ -51,7 +51,7 @@ def get_cpus_mapping_from_xml(path, cpus):
 	return False
 
 def init_cpus(cpus):
-	server_cpus = int(subprocess.check_output("cat /proc/cpuinfo|grep -c ^proc", shell=True).strip())
+	server_cpus = int(subprocess.check_output("grep -c ^proc /proc/cpuinfo", shell=True).strip())
 
 	for i in range(0, server_cpus):
 		cpus[i] = ''
