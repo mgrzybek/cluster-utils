@@ -20,6 +20,8 @@ def get_sbd_devices(conf_file):
 			if rs:
 				return rs.group(1).split(';')
 
+	raise Exception('No SBD device found')
+
 def get_sbd_command_line():
 	command_line = [ 'sbd' ]
 
