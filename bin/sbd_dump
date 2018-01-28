@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import subprocess
+import sys
 from cluster_utils.sbd import get_sbd_command_line
 
 try:
